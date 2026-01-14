@@ -1,6 +1,8 @@
 # Turing Machine Executor
 
-A Python implementation of a Turing machine executor that allows users to define, execute, and test Turing machines.
+A Rust implementation of a Turing machine executor that allows users to define, execute, and test Turing machines.
+
+> **Note**: This project was originally written in Python and has been rewritten in Rust for improved performance and memory safety. The Python implementation is still available for reference.
 
 ## Features
 
@@ -24,21 +26,44 @@ A Turing machine is a mathematical model of computation that consists of:
 
 ## Installation
 
-No installation required! Just clone the repository:
+### Rust Version (Recommended)
+
+1. Install Rust from [https://rustup.rs/](https://rustup.rs/) if you haven't already
+2. Clone the repository:
 
 ```bash
 git clone https://github.com/vibecoding-inc/turning-machine.git
 cd turning-machine
 ```
 
+3. Build the project:
+
+```bash
+cargo build --release
+```
+
+The compiled binary will be available at `./target/release/turning_machine`.
+
+### Python Version (Legacy)
+
+No installation required for the Python version! Just ensure you have Python 3.6+:
+
+```bash
+python3 --version
+```
+
 ## Usage
 
-### Interactive Mode
+### Rust Version
+
+#### Interactive Mode
 
 Run the main program to use the interactive interface:
 
 ```bash
-python3 main.py
+cargo run --release
+# or if already built:
+./target/release/turning_machine
 ```
 
 The program offers several options:
@@ -48,24 +73,42 @@ The program offers several options:
 4. **Help** - View format documentation
 5. **Exit** - Close the program
 
-### Running Examples Programmatically
+#### Running Examples
 
-You can also run the example machines directly:
+You can run the example machines directly:
 
 ```bash
-python3 turing_machine.py
+cargo run --release -- --examples
+# or if already built:
+./target/release/turning_machine --examples
 ```
 
-This will execute several test cases on the built-in example machines.
-
-### Loading from File
+#### Loading from File
 
 Example machine definitions are provided in the `examples/` directory:
 
 ```bash
 # Run the interactive program and select option 3
-python3 main.py
+cargo run --release
 # Then enter: examples/even_ones.json
+```
+
+### Python Version (Legacy)
+
+#### Interactive Mode
+
+Run the main program to use the interactive interface:
+
+```bash
+python3 main.py
+```
+
+#### Running Examples Programmatically
+
+You can also run the example machines directly:
+
+```bash
+python3 turing_machine.py
 ```
 
 ## Machine Definition Format
@@ -156,7 +199,13 @@ When you execute a Turing machine, the program provides:
 
 ## API Usage
 
-You can also use the Turing machine executor in your own Python code:
+### Rust
+
+You can use the Turing machine executor as a library in your own Rust code by creating a library crate structure (not currently set up in this repository).
+
+### Python
+
+You can use the Turing machine executor in your own Python code:
 
 ```python
 from turing_machine import TuringMachine
@@ -188,6 +237,11 @@ else:
 
 ## Requirements
 
+### Rust Version
+- Rust 1.70+ (install from [https://rustup.rs/](https://rustup.rs/))
+- No external runtime dependencies
+
+### Python Version
 - Python 3.6 or higher
 - No external dependencies required
 
