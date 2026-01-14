@@ -359,7 +359,7 @@ Direction: "L" (left), "R" (right)
 
 The program will:
 1. Execute the machine on your input string
-2. Report if it ACCEPTS or REJECTS (holds)
+2. Report if it ACCEPTS or REJECTS (halts)
 3. Show the final state reached
 "#
     );
@@ -418,7 +418,7 @@ fn run_example_machine() {
 
                 if let Some(true) = result.accepts {
                     println!(
-                        "\n✓ RESULT: ACCEPTS (holds in state {})",
+                        "\n✓ RESULT: ACCEPTS (halts in state {})",
                         result.final_state
                     );
                 } else if let Some(false) = result.accepts {
@@ -496,7 +496,7 @@ fn run_custom_machine() {
 
                             if let Some(true) = result.accepts {
                                 println!(
-                                    "\n✓ RESULT: ACCEPTS (holds in state {})",
+                                    "\n✓ RESULT: ACCEPTS (halts in state {})",
                                     result.final_state
                                 );
                             } else if let Some(false) = result.accepts {
@@ -566,7 +566,7 @@ fn load_machine_from_file() {
 
                                 if let Some(true) = result.accepts {
                                     println!(
-                                        "\n✓ RESULT: ACCEPTS (holds in state {})",
+                                        "\n✓ RESULT: ACCEPTS (halts in state {})",
                                         result.final_state
                                     );
                                 } else if let Some(false) = result.accepts {
@@ -655,7 +655,7 @@ fn main() {
 
     println!("\nWelcome to the Turing Machine Executor!");
     println!("This program allows you to execute Turing machines and determine:");
-    println!("  1. If the machine accepts/rejects the input (holds)");
+    println!("  1. If the machine accepts/rejects the input (halts)");
     println!("  2. The final state reached by the machine");
 
     loop {
