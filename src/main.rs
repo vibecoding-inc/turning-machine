@@ -419,7 +419,7 @@ impl TuringMachine {
                     };
                     
                     // Arrow from current state (box above) to target state
-                    let arrow = format!("      │ --[{}:{}{}]-->  {}", 
+                    let arrow = format!("      │ --[{}:{}{}]--> {}", 
                         symbol, write_symbol, dir_arrow, to_state);
                     
                     if is_next {
@@ -429,8 +429,17 @@ impl TuringMachine {
                     } else {
                         println!("{}", arrow);
                     }
+                    
+                    // Add visual pointer to target state box
+                    let pointer = format!("      │              ↓");
+                    if is_next {
+                        println!("{}", pointer.bold().green());
+                    } else if is_current {
+                        println!("{}", pointer.yellow());
+                    } else {
+                        println!("{}", pointer);
+                    }
                 }
-                println!("      ↓");
             }
             
             if i < sorted_states.len() - 1 {
