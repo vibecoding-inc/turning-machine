@@ -637,6 +637,22 @@ fn parse_machine_json(json_data: &MachineJson) -> Result<TuringMachine, String> 
     )
 }
 
+/// Format a filename into a display name
+fn format_display_name(filename: &str) -> String {
+    filename
+        .replace('_', " ")
+        .split_whitespace()
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(first) => first.to_uppercase().chain(chars).collect(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 /// Load example Turing machines from the examples folder
 fn load_example_machines() -> HashMap<String, (TuringMachine, String)> {
     let mut examples = HashMap::new();
@@ -645,30 +661,28 @@ fn load_example_machines() -> HashMap<String, (TuringMachine, String)> {
     if let Ok(entries) = fs::read_dir("examples") {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.extension().and_then(|s| s.to_str()) == Some("json") {
-                if let Some(filename) = path.file_stem().and_then(|s| s.to_str()) {
-                    if let Ok(json_str) = fs::read_to_string(&path) {
-                        if let Ok(json_data) = serde_json::from_str::<MachineJson>(&json_str) {
-                            if let Ok(machine) = parse_machine_json(&json_data) {
-                                // Create a display name from the filename
-                                let display_name = filename
-                                    .replace('_', " ")
-                                    .split_whitespace()
-                                    .map(|word| {
-                                        let mut chars = word.chars();
-                                        match chars.next() {
-                                            None => String::new(),
-                                            Some(first) => first.to_uppercase().chain(chars).collect(),
-                                        }
-                                    })
-                                    .collect::<Vec<_>>()
-                                    .join(" ");
-                                examples.insert(filename.to_string(), (machine, display_name));
-                            }
-                        }
-                    }
-                }
+            if path.extension().and_then(|s| s.to_str()) != Some("json") {
+                continue;
             }
+            
+            let Some(filename) = path.file_stem().and_then(|s| s.to_str()) else {
+                continue;
+            };
+            
+            let Ok(json_str) = fs::read_to_string(&path) else {
+                continue;
+            };
+            
+            let Ok(json_data) = serde_json::from_str::<MachineJson>(&json_str) else {
+                continue;
+            };
+            
+            let Ok(machine) = parse_machine_json(&json_data) else {
+                continue;
+            };
+            
+            let display_name = format_display_name(filename);
+            examples.insert(filename.to_string(), (machine, display_name));
         }
     }
     
@@ -819,20 +833,7 @@ fn run_example_machine() {
         let fallback = create_example_machines();
         let mut list: Vec<(String, String)> = fallback
             .keys()
-            .map(|key| {
-                let display_name = key.replace('_', " ")
-                    .split_whitespace()
-                    .map(|word| {
-                        let mut chars = word.chars();
-                        match chars.next() {
-                            None => String::new(),
-                            Some(first) => first.to_uppercase().chain(chars).collect(),
-                        }
-                    })
-                    .collect::<Vec<_>>()
-                    .join(" ");
-                (key.clone(), display_name)
-            })
+            .map(|key| (key.clone(), format_display_name(key)))
             .collect();
         list.sort_by(|a, b| a.0.cmp(&b.0));
         list
@@ -872,15 +873,20 @@ fn run_example_machine() {
     
     // Load the machine
     let machine = if !loaded_examples.is_empty() {
-        loaded_examples.get(machine_key).map(|(m, _)| m).unwrap()
+        match loaded_examples.get(machine_key) {
+            Some((m, _)) => m,
+            None => {
+                println!("Machine '{}' not found!", machine_key);
+                return;
+            }
+        }
     } else {
         let fallback = create_example_machines();
         if fallback.contains_key(machine_key) {
-            // We need to load it again to avoid lifetime issues
-            // This is not ideal but works for now
+            // Reload to avoid lifetime issues
             return run_single_example(machine_key, machine_name);
         } else {
-            println!("Machine not found!");
+            println!("Machine '{}' not found!", machine_key);
             return;
         }
     };
