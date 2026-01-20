@@ -1,0 +1,32 @@
+{
+    "states": ["q_start", "q_match_0", "q_match_1", "q_return_0", "q_return_1", "q_check_end", "accept", "reject"],
+    "alphabet": ["0", "1"],
+    "tape_alphabet": ["0", "1", "X", "_"],
+    "initial_state": "q_start",
+    "accept_states": ["accept"],
+    "reject_states": ["reject"],
+    "blank_symbol": "_",
+    "transitions": {
+        "q_start,0": ["q_match_0", "X", "R"],
+        "q_start,1": ["q_match_1", "X", "R"],
+        "q_start,X": ["q_start", "X", "R"],
+        "q_start,_": ["accept", "_", "R"],
+        "q_match_0,0": ["q_match_0", "0", "R"],
+        "q_match_0,1": ["q_match_0", "1", "R"],
+        "q_match_0,X": ["q_match_0", "X", "R"],
+        "q_match_0,_": ["q_return_0", "_", "L"],
+        "q_match_1,0": ["q_match_1", "0", "R"],
+        "q_match_1,1": ["q_match_1", "1", "R"],
+        "q_match_1,X": ["q_match_1", "X", "R"],
+        "q_match_1,_": ["q_return_1", "_", "L"],
+        "q_return_0,0": ["q_check_end", "X", "L"],
+        "q_return_0,1": ["reject", "1", "R"],
+        "q_return_0,X": ["accept", "X", "R"],
+        "q_return_1,1": ["q_check_end", "X", "L"],
+        "q_return_1,0": ["reject", "0", "R"],
+        "q_return_1,X": ["accept", "X", "R"],
+        "q_check_end,0": ["q_check_end", "0", "L"],
+        "q_check_end,1": ["q_check_end", "1", "L"],
+        "q_check_end,X": ["q_start", "X", "R"]
+    }
+}

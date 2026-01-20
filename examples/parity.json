@@ -1,0 +1,17 @@
+{
+    "states": ["q_scan", "q_check", "accept_even", "accept_odd", "reject"],
+    "alphabet": ["0", "1"],
+    "tape_alphabet": ["0", "1", "_"],
+    "initial_state": "q_scan",
+    "accept_states": ["accept_even", "accept_odd"],
+    "reject_states": ["reject"],
+    "blank_symbol": "_",
+    "transitions": {
+        "q_scan,0": ["q_scan", "0", "R"],
+        "q_scan,1": ["q_scan", "1", "R"],
+        "q_scan,_": ["q_check", "_", "L"],
+        "q_check,0": ["accept_even", "0", "R"],
+        "q_check,1": ["accept_odd", "1", "R"],
+        "q_check,_": ["reject", "_", "R"]
+    }
+}

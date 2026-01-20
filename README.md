@@ -150,6 +150,36 @@ Accepts strings of one or more 'a's followed by one or more 'b's.
 - ✗ `"ba"` → REJECTS
 - ✗ `"aba"` → REJECTS
 
+### 4. Palindromes (`examples/palindrome.json`)
+
+Accepts strings that are palindromes (read the same forwards and backwards) over the alphabet {0, 1}.
+
+**Examples:**
+- ✓ `""` → ACCEPTS
+- ✓ `"0"` → ACCEPTS
+- ✓ `"1"` → ACCEPTS
+- ✓ `"00"` → ACCEPTS
+- ✓ `"11"` → ACCEPTS
+- ✗ `"01"` → REJECTS
+- ✗ `"10"` → REJECTS
+- ✓ `"101"` → ACCEPTS
+- ✓ `"1001"` → ACCEPTS
+- ✗ `"1010"` → REJECTS
+- ✓ `"10101"` → ACCEPTS
+
+### 5. Parity Check (`examples/parity.json`)
+
+Checks the parity (even or odd) of a binary number by examining its rightmost bit. Accepts all binary numbers, with the final state indicating whether the number is even (ends with 0) or odd (ends with 1). Empty strings are rejected.
+
+**Examples:**
+- ✗ `""` → REJECTS (no digit to check)
+- ✓ `"0"` → ACCEPTS (state: accept_even)
+- ✓ `"1"` → ACCEPTS (state: accept_odd)
+- ✓ `"10"` → ACCEPTS (state: accept_even)
+- ✓ `"11"` → ACCEPTS (state: accept_odd)
+- ✓ `"100"` → ACCEPTS (state: accept_even)
+- ✓ `"101"` → ACCEPTS (state: accept_odd)
+
 ## Output Interpretation
 
 When you execute a Turing machine, the program provides:
