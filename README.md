@@ -2,8 +2,6 @@
 
 A Rust implementation of a Turing machine executor that allows users to define, execute, and test Turing machines.
 
-> **Note**: This project was originally written in Python and has been rewritten in Rust for improved performance and memory safety. The Python implementation is still available for reference.
-
 ## Features
 
 - Execute Turing machines with custom input strings
@@ -26,8 +24,6 @@ A Turing machine is a mathematical model of computation that consists of:
 
 ## Installation
 
-### Rust Version (Recommended)
-
 1. Install Rust from [https://rustup.rs/](https://rustup.rs/) if you haven't already
 2. Clone the repository:
 
@@ -44,17 +40,7 @@ cargo build --release
 
 The compiled binary will be available at `./target/release/turning_machine`.
 
-### Python Version (Legacy)
-
-No installation required for the Python version! Just ensure you have Python 3.6+:
-
-```bash
-python3 --version
-```
-
 ## Usage
-
-### Rust Version
 
 #### Interactive Mode
 
@@ -91,24 +77,6 @@ Example machine definitions are provided in the `examples/` directory:
 # Run the interactive program and select option 3
 cargo run --release
 # Then enter: examples/even_ones.json
-```
-
-### Python Version (Legacy)
-
-#### Interactive Mode
-
-Run the main program to use the interactive interface:
-
-```bash
-python3 main.py
-```
-
-#### Running Examples Programmatically
-
-You can also run the example machines directly:
-
-```bash
-python3 turing_machine.py
 ```
 
 ## Machine Definition Format
@@ -199,51 +167,12 @@ When you execute a Turing machine, the program provides:
 
 ## API Usage
 
-### Rust
-
 You can use the Turing machine executor as a library in your own Rust code by creating a library crate structure (not currently set up in this repository).
-
-### Python
-
-You can use the Turing machine executor in your own Python code:
-
-```python
-from turing_machine import TuringMachine
-
-# Define a simple machine
-machine = TuringMachine(
-    states={'q0', 'accept', 'reject'},
-    alphabet={'0', '1'},
-    tape_alphabet={'0', '1', '_'},
-    transitions={
-        ('q0', '0'): ('q0', '0', 'R'),
-        ('q0', '1'): ('q0', '1', 'R'),
-        ('q0', '_'): ('accept', '_', 'R'),
-    },
-    initial_state='q0',
-    accept_states={'accept'},
-    reject_states={'reject'}
-)
-
-# Execute the machine
-result = machine.execute('0101')
-
-# Check the result
-if result['accepts']:
-    print(f"Accepted in state {result['final_state']}")
-else:
-    print(f"Rejected in state {result['final_state']}")
-```
 
 ## Requirements
 
-### Rust Version
 - Rust 1.70+ (install from [https://rustup.rs/](https://rustup.rs/))
 - No external runtime dependencies
-
-### Python Version
-- Python 3.6 or higher
-- No external dependencies required
 
 ## Contributing
 

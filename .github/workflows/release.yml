@@ -23,10 +23,6 @@ jobs:
             target: x86_64-pc-windows-msvc
             artifact_name: turing_machine.exe
             asset_name: turing_machine-windows-x86_64.exe
-          - os: macos-13
-            target: x86_64-apple-darwin
-            artifact_name: turing_machine
-            asset_name: turing_machine-macos-x86_64
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact_name: turing_machine
@@ -80,12 +76,10 @@ jobs:
             ## Downloads
             - **Linux**: turing_machine-linux-x86_64
             - **Windows**: turing_machine-windows-x86_64.exe
-            - **macOS (Intel)**: turing_machine-macos-x86_64
             - **macOS (Apple Silicon)**: turing_machine-macos-aarch64
           draft: false
           prerelease: false
           files: |
             artifacts/turing_machine-linux-x86_64/turing_machine
             artifacts/turing_machine-windows-x86_64.exe/turing_machine.exe
-            artifacts/turing_machine-macos-x86_64/turing_machine
             artifacts/turing_machine-macos-aarch64/turing_machine
