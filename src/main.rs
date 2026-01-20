@@ -340,143 +340,91 @@ impl TuringMachine {
         let mut sorted_states: Vec<_> = self.states.iter().collect();
         sorted_states.sort();
         
-        // Draw states in a horizontal layout
-        let states_per_row = 4;
+        // Draw states with arrows connecting them
+        // Create a simple horizontal layout with arrows
         for (i, state) in sorted_states.iter().enumerate() {
-            if i % states_per_row == 0 && i > 0 {
-                println!();
-            }
+            // Draw state box
+            let is_current = current_state.map(|c| c == state.as_str()).unwrap_or(false);
+            let is_accept = self.accept_states.contains(*state);
+            let is_reject = self.reject_states.contains(*state);
             
-            let mut state_box = format!("┌{:─^12}┐", "");
-            let mut state_name = format!("│{:^12}│", state.as_str());
-            let mut state_type = if self.accept_states.contains(*state) {
-                format!("│{:^12}│", "✓ ACCEPT")
-            } else if self.reject_states.contains(*state) {
-                format!("│{:^12}│", "✗ REJECT")
+            // State box components
+            let box_top = "┌──────────┐";
+            let state_line = format!("│ {:^8} │", state.as_str());
+            let type_line = if is_accept {
+                "│ ✓ ACCEPT │"
+            } else if is_reject {
+                "│ ✗ REJECT │"
             } else {
-                format!("│{:^12}│", "")
+                "│          │"
             };
-            let _state_bottom = format!("└{:─^12}┘", "");
+            let box_bottom = "└──────────┘";
             
-            // Highlight current state
-            if let Some(current) = current_state {
-                if state.as_str() == current {
-                    state_box = state_box.bold().yellow().to_string();
-                    state_name = state_name.bold().yellow().to_string();
-                    state_type = state_type.bold().yellow().to_string();
-                }
-            }
-            
-            // Apply color for accept/reject states
-            if self.accept_states.contains(*state) {
-                state_type = state_type.green().to_string();
-            } else if self.reject_states.contains(*state) {
-                state_type = state_type.red().to_string();
-            }
-            
-            print!("  {}  ", state_box);
-            if (i + 1) % states_per_row == 0 || i == sorted_states.len() - 1 {
-                println!();
-                for j in (i + 1).saturating_sub(states_per_row)..=i {
-                    if j < sorted_states.len() {
-                        let state = sorted_states[j];
-                        let mut name = format!("│{:^12}│", state.as_str());
-                        if let Some(current) = current_state {
-                            if state.as_str() == current {
-                                name = name.bold().yellow().to_string();
-                            }
-                        }
-                        print!("  {}  ", name);
-                    }
-                }
-                println!();
-                for j in (i + 1).saturating_sub(states_per_row)..=i {
-                    if j < sorted_states.len() {
-                        let state = sorted_states[j];
-                        let mut type_str = if self.accept_states.contains(state) {
-                            format!("│{:^12}│", "✓ ACCEPT").green().to_string()
-                        } else if self.reject_states.contains(state) {
-                            format!("│{:^12}│", "✗ REJECT").red().to_string()
-                        } else {
-                            format!("│{:^12}│", "")
-                        };
-                        if let Some(current) = current_state {
-                            if state.as_str() == current {
-                                type_str = type_str.bold().yellow().to_string();
-                            }
-                        }
-                        print!("  {}  ", type_str);
-                    }
-                }
-                println!();
-                for j in (i + 1).saturating_sub(states_per_row)..=i {
-                    if j < sorted_states.len() {
-                        let state = sorted_states[j];
-                        let mut bottom = format!("└{:─^12}┘", "");
-                        if let Some(current) = current_state {
-                            if state.as_str() == current {
-                                bottom = bottom.bold().yellow().to_string();
-                            }
-                        }
-                        print!("  {}  ", bottom);
-                    }
-                }
-                println!();
-            }
-        }
-        
-        // Show transition arrows
-        println!("\n{}:", "Transition Arrows".bold());
-        
-        // Group transitions by source state
-        let mut transitions_by_source: HashMap<&String, Vec<(char, &String, char, Direction)>> = HashMap::new();
-        for ((from_state, symbol), (to_state, write_symbol, direction)) in &self.transitions {
-            transitions_by_source
-                .entry(from_state)
-                .or_insert_with(Vec::new)
-                .push((*symbol, to_state, *write_symbol, *direction));
-        }
-        
-        // Sort states for consistent display
-        let mut sorted_source_states: Vec<_> = transitions_by_source.keys().collect();
-        sorted_source_states.sort();
-        
-        for from_state in sorted_source_states {
-            let transitions = transitions_by_source.get(from_state).unwrap();
-            
-            for (symbol, to_state, write_symbol, direction) in transitions {
-                let dir_arrow = match direction {
-                    Direction::L => "←",
-                    Direction::R => "→",
-                };
-                
-                // Check if this is the next transition to be executed
-                let is_next = if let (Some(current), Some((next_sym, next_state, _, _))) = (current_state, next_transition) {
-                    from_state.as_str() == current && *symbol == next_sym && to_state.as_str() == next_state
+            // Print state box
+            if is_current {
+                println!("  {}", box_top.bold().yellow());
+                println!("  {}", state_line.bold().yellow());
+                if is_accept {
+                    println!("  {}", type_line.green().bold().yellow());
+                } else if is_reject {
+                    println!("  {}", type_line.red().bold().yellow());
                 } else {
-                    false
-                };
+                    println!("  {}", type_line.bold().yellow());
+                }
+                println!("  {}", box_bottom.bold().yellow());
+            } else {
+                println!("  {}", box_top);
+                println!("  {}", state_line);
+                if is_accept {
+                    println!("  {}", type_line.green());
+                } else if is_reject {
+                    println!("  {}", type_line.red());
+                } else {
+                    println!("  {}", type_line);
+                }
+                println!("  {}", box_bottom);
+            }
+            
+            // Draw transitions from this state
+            let mut state_transitions = Vec::new();
+            for ((from_state, symbol), (to_state, write_symbol, direction)) in &self.transitions {
+                if from_state == *state {
+                    state_transitions.push((symbol, to_state.as_str(), write_symbol, direction));
+                }
+            }
+            
+            if !state_transitions.is_empty() {
+                state_transitions.sort_by_key(|(s, _, _, _)| *s);
                 
-                let arrow_line = format!(
-                    "  {} --[{}: {}{}]--→ {}",
-                    from_state,
-                    symbol,
-                    write_symbol,
-                    dir_arrow,
-                    to_state
-                );
-                
-                if is_next {
-                    println!("{}", arrow_line.bold().green());
-                } else if let Some(current) = current_state {
-                    if from_state.as_str() == current {
-                        println!("{}", arrow_line.yellow());
+                for (symbol, to_state, write_symbol, direction) in state_transitions {
+                    let dir_arrow = match direction {
+                        Direction::L => "←",
+                        Direction::R => "→",
+                    };
+                    
+                    // Check if this is the next transition
+                    let is_next = if let (Some(current), Some((next_sym, next_state, _, _))) = (current_state, next_transition) {
+                        state.as_str() == current && *symbol == next_sym && to_state == next_state
                     } else {
-                        println!("{}", arrow_line);
+                        false
+                    };
+                    
+                    let arrow = format!("      │ {} --[{}:{}{}]-->  {}", 
+                        state.as_str(), symbol, write_symbol, dir_arrow, to_state);
+                    
+                    if is_next {
+                        println!("{}", arrow.bold().green());
+                    } else if is_current {
+                        println!("{}", arrow.yellow());
+                    } else {
+                        println!("{}", arrow);
                     }
-                } else {
-                    println!("{}", arrow_line);
                 }
+                println!("      ↓");
+            }
+            
+            if i < sorted_states.len() - 1 {
+                println!();
             }
         }
         
