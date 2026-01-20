@@ -264,30 +264,13 @@ impl TuringMachine {
     }
 
     /// Display the state diagram with transitions
-    fn display_state_diagram(&self, current_state: Option<&str>) {
+    fn display_state_diagram(&self, current_state: Option<&str>, next_transition: Option<(char, &str, char, Direction)>) {
         println!("\n{}", "=".repeat(60));
         println!("{}", "STATE DIAGRAM".bold());
         println!("{}", "=".repeat(60));
 
-        // Display states
-        println!("\n{}:", "States".bold());
-        for state in &self.states {
-            let mut state_str = format!("  {}", state);
-            
-            if self.accept_states.contains(state) {
-                state_str = format!("{} [ACCEPT]", state_str).green().to_string();
-            } else if self.reject_states.contains(state) {
-                state_str = format!("{} [REJECT]", state_str).red().to_string();
-            }
-
-            if let Some(current) = current_state {
-                if state == current {
-                    state_str = format!("→ {}", state_str).bold().yellow().to_string();
-                }
-            }
-
-            println!("{}", state_str);
-        }
+        // Draw visual ASCII diagram
+        self.draw_state_diagram(current_state, next_transition);
 
         // Display transitions grouped by state
         println!("\n{}:", "Transitions".bold());
@@ -326,7 +309,16 @@ impl TuringMachine {
                     symbol, write_symbol, dir_str, new_state
                 );
 
-                if let Some(current) = current_state {
+                // Highlight the next transition to be executed
+                let is_next_transition = if let (Some(current), Some((next_sym, next_state, _, _))) = (current_state, next_transition) {
+                    state.as_str() == current && symbol == next_sym && new_state.as_str() == next_state
+                } else {
+                    false
+                };
+
+                if is_next_transition {
+                    println!("{}", format!("  ▶ {}", transition_str).bold().green());
+                } else if let Some(current) = current_state {
                     if state.as_str() == current {
                         println!("{}", transition_str.yellow());
                     } else {
@@ -337,6 +329,115 @@ impl TuringMachine {
                 }
             }
         }
+        println!();
+    }
+
+    /// Draw ASCII art diagram of state machine
+    fn draw_state_diagram(&self, current_state: Option<&str>, next_transition: Option<(char, &str, char, Direction)>) {
+        println!("\n{}:", "Visual Diagram".bold());
+        
+        // Sort states for consistent display
+        let mut sorted_states: Vec<_> = self.states.iter().collect();
+        sorted_states.sort();
+        
+        // Draw states in a horizontal layout
+        let states_per_row = 4;
+        for (i, state) in sorted_states.iter().enumerate() {
+            if i % states_per_row == 0 && i > 0 {
+                println!();
+            }
+            
+            let mut state_box = format!("┌{:─^12}┐", "");
+            let mut state_name = format!("│{:^12}│", state.as_str());
+            let mut state_type = if self.accept_states.contains(*state) {
+                format!("│{:^12}│", "✓ ACCEPT")
+            } else if self.reject_states.contains(*state) {
+                format!("│{:^12}│", "✗ REJECT")
+            } else {
+                format!("│{:^12}│", "")
+            };
+            let _state_bottom = format!("└{:─^12}┘", "");
+            
+            // Highlight current state
+            if let Some(current) = current_state {
+                if state.as_str() == current {
+                    state_box = state_box.bold().yellow().to_string();
+                    state_name = state_name.bold().yellow().to_string();
+                    state_type = state_type.bold().yellow().to_string();
+                }
+            }
+            
+            // Apply color for accept/reject states
+            if self.accept_states.contains(*state) {
+                state_type = state_type.green().to_string();
+            } else if self.reject_states.contains(*state) {
+                state_type = state_type.red().to_string();
+            }
+            
+            print!("  {}  ", state_box);
+            if (i + 1) % states_per_row == 0 || i == sorted_states.len() - 1 {
+                println!();
+                for j in (i + 1).saturating_sub(states_per_row)..=i {
+                    if j < sorted_states.len() {
+                        let state = sorted_states[j];
+                        let mut name = format!("│{:^12}│", state.as_str());
+                        if let Some(current) = current_state {
+                            if state.as_str() == current {
+                                name = name.bold().yellow().to_string();
+                            }
+                        }
+                        print!("  {}  ", name);
+                    }
+                }
+                println!();
+                for j in (i + 1).saturating_sub(states_per_row)..=i {
+                    if j < sorted_states.len() {
+                        let state = sorted_states[j];
+                        let mut type_str = if self.accept_states.contains(state) {
+                            format!("│{:^12}│", "✓ ACCEPT").green().to_string()
+                        } else if self.reject_states.contains(state) {
+                            format!("│{:^12}│", "✗ REJECT").red().to_string()
+                        } else {
+                            format!("│{:^12}│", "")
+                        };
+                        if let Some(current) = current_state {
+                            if state.as_str() == current {
+                                type_str = type_str.bold().yellow().to_string();
+                            }
+                        }
+                        print!("  {}  ", type_str);
+                    }
+                }
+                println!();
+                for j in (i + 1).saturating_sub(states_per_row)..=i {
+                    if j < sorted_states.len() {
+                        let state = sorted_states[j];
+                        let mut bottom = format!("└{:─^12}┘", "");
+                        if let Some(current) = current_state {
+                            if state.as_str() == current {
+                                bottom = bottom.bold().yellow().to_string();
+                            }
+                        }
+                        print!("  {}  ", bottom);
+                    }
+                }
+                println!();
+            }
+        }
+        
+        // Show next transition if available
+        if let (Some(current), Some((symbol, next_state, write_symbol, direction))) = (current_state, next_transition) {
+            println!("\n{}:", "Next Transition".bold().green());
+            let dir_str = match direction {
+                Direction::L => "←",
+                Direction::R => "→",
+            };
+            println!("  {} --[read: '{}']-->", current.bold().yellow(), symbol.to_string().cyan());
+            println!("    • Write: '{}'", write_symbol.to_string().cyan());
+            println!("    • Move: {}", dir_str.cyan());
+            println!("    • Goto: {}", next_state.bold().yellow());
+        }
+        
         println!();
     }
 
@@ -905,8 +1006,29 @@ fn run_visual_mode(machine: &TuringMachine, input_str: &str) {
                 println!("Step: {}/{}", current_step, max_step);
                 println!("Current State: {}", snapshot.current_state.bold().yellow());
                 
-                // Display state diagram with current state highlighted
-                machine.display_state_diagram(Some(&snapshot.current_state));
+                // Calculate next transition
+                let next_transition = if !machine.accept_states.contains(&snapshot.current_state)
+                    && !machine.reject_states.contains(&snapshot.current_state)
+                {
+                    let head_pos = snapshot.head_position as usize;
+                    let current_symbol = if head_pos < snapshot.tape.len() {
+                        snapshot.tape[head_pos]
+                    } else {
+                        machine.blank_symbol
+                    };
+                    
+                    machine
+                        .transitions
+                        .get(&(snapshot.current_state.clone(), current_symbol))
+                        .map(|(next_state, write_symbol, direction)| {
+                            (current_symbol, next_state.as_str(), *write_symbol, *direction)
+                        })
+                } else {
+                    None
+                };
+                
+                // Display state diagram with current state highlighted and next transition
+                machine.display_state_diagram(Some(&snapshot.current_state), next_transition);
                 
                 // Display tape
                 TuringMachine::display_tape(snapshot, machine.blank_symbol);
