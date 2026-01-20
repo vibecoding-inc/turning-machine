@@ -74,7 +74,7 @@ jobs:
           name: Release ${{ steps.tag.outputs.TAG_NAME }}
           body: |
             Automated release built from commit ${{ github.sha }}
-            
+
             ## Downloads
             - **Linux**: turing_machine-linux-x86_64
             - **Windows**: turing_machine-windows-x86_64.exe
