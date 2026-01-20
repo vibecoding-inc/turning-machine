@@ -348,17 +348,21 @@ impl TuringMachine {
             let is_accept = self.accept_states.contains(*state);
             let is_reject = self.reject_states.contains(*state);
             
-            // State box components
-            let box_top = "┌──────────┐";
-            let state_line = format!("│ {:^8} │", state.as_str());
+            // State box components - dynamically sized based on state name (width = text width + 2)
+            let state_width = state.len();
+            let box_width = state_width + 2;
+            let horizontal_line = "─".repeat(box_width);
+            
+            let box_top = format!("┌{}┐", horizontal_line);
+            let state_line = format!("│ {:^width$} │", state.as_str(), width = state_width);
             let type_line = if is_accept {
-                "│ ✓ ACCEPT │"
+                format!("│ {:^width$} │", "✓ ACCEPT", width = state_width)
             } else if is_reject {
-                "│ ✗ REJECT │"
+                format!("│ {:^width$} │", "✗ REJECT", width = state_width)
             } else {
-                "│          │"
+                format!("│ {} │", " ".repeat(state_width))
             };
-            let box_bottom = "└──────────┘";
+            let box_bottom = format!("└{}┘", horizontal_line);
             
             // Print state box
             if is_current {
@@ -409,8 +413,9 @@ impl TuringMachine {
                         false
                     };
                     
-                    let arrow = format!("      │ {} --[{}:{}{}]-->  {}", 
-                        state.as_str(), symbol, write_symbol, dir_arrow, to_state);
+                    // Arrow from current state (box above) to target state
+                    let arrow = format!("      │ --[{}:{}{}]-->  {}", 
+                        symbol, write_symbol, dir_arrow, to_state);
                     
                     if is_next {
                         println!("{}", arrow.bold().green());
