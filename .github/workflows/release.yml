@@ -59,6 +59,12 @@ jobs:
         with:
           path: artifacts
 
+      - name: Rename artifacts to unique names
+        run: |
+          mv artifacts/turing_machine-linux-x86_64/turing_machine artifacts/turing_machine-linux-x86_64/turing_machine-linux-x86_64
+          mv artifacts/turing_machine-windows-x86_64.exe/turing_machine.exe artifacts/turing_machine-windows-x86_64.exe/turing_machine-windows-x86_64.exe
+          mv artifacts/turing_machine-macos-aarch64/turing_machine artifacts/turing_machine-macos-aarch64/turing_machine-macos-aarch64
+
       - name: Generate release tag
         id: tag
         run: |
@@ -80,6 +86,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            artifacts/turing_machine-linux-x86_64/turing_machine
-            artifacts/turing_machine-windows-x86_64.exe/turing_machine.exe
-            artifacts/turing_machine-macos-aarch64/turing_machine
+            artifacts/turing_machine-linux-x86_64/turing_machine-linux-x86_64
+            artifacts/turing_machine-windows-x86_64.exe/turing_machine-windows-x86_64.exe
+            artifacts/turing_machine-macos-aarch64/turing_machine-macos-aarch64
