@@ -425,61 +425,6 @@ impl TuringMachine {
             }
         }
         
-        // Show transition arrows
-        println!("\n{}:", "Transition Arrows".bold());
-        
-        // Group transitions by source state
-        let mut transitions_by_source: HashMap<&String, Vec<(char, &String, char, Direction)>> = HashMap::new();
-        for ((from_state, symbol), (to_state, write_symbol, direction)) in &self.transitions {
-            transitions_by_source
-                .entry(from_state)
-                .or_insert_with(Vec::new)
-                .push((*symbol, to_state, *write_symbol, *direction));
-        }
-        
-        // Sort states for consistent display
-        let mut sorted_source_states: Vec<_> = transitions_by_source.keys().collect();
-        sorted_source_states.sort();
-        
-        for from_state in sorted_source_states {
-            let transitions = transitions_by_source.get(from_state).unwrap();
-            
-            for (symbol, to_state, write_symbol, direction) in transitions {
-                let dir_arrow = match direction {
-                    Direction::L => "←",
-                    Direction::R => "→",
-                };
-                
-                // Check if this is the next transition to be executed
-                let is_next = if let (Some(current), Some((next_sym, next_state, _, _))) = (current_state, next_transition) {
-                    from_state.as_str() == current && *symbol == next_sym && to_state.as_str() == next_state
-                } else {
-                    false
-                };
-                
-                let arrow_line = format!(
-                    "  {} --[{}: {}{}]--→ {}",
-                    from_state,
-                    symbol,
-                    write_symbol,
-                    dir_arrow,
-                    to_state
-                );
-                
-                if is_next {
-                    println!("{}", arrow_line.bold().green());
-                } else if let Some(current) = current_state {
-                    if from_state.as_str() == current {
-                        println!("{}", arrow_line.yellow());
-                    } else {
-                        println!("{}", arrow_line);
-                    }
-                } else {
-                    println!("{}", arrow_line);
-                }
-            }
-        }
-        
         // Show next transition if available
         if let (Some(current), Some((symbol, next_state, write_symbol, direction))) = (current_state, next_transition) {
             println!("\n{}:", "Next Transition".bold().green());
