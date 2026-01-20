@@ -1,3 +1,4 @@
+use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -18,6 +19,15 @@ struct ExecutionResult {
     steps: usize,
     halted: bool,
     tape: String,
+}
+
+/// State snapshot during step-by-step execution
+#[derive(Debug, Clone)]
+struct ExecutionSnapshot {
+    tape: Vec<char>,
+    head_position: i32,
+    current_state: String,
+    step: usize,
 }
 
 /// A Turing machine executor
@@ -164,6 +174,223 @@ impl TuringMachine {
             halted: false,
             tape: tape.iter().collect(),
         })
+    }
+
+    /// Execute the machine step-by-step, returning snapshots
+    fn execute_step_by_step(
+        &self,
+        input_string: &str,
+        max_steps: usize,
+    ) -> Result<Vec<ExecutionSnapshot>, String> {
+        let mut snapshots = Vec::new();
+
+        // Initialize tape with input
+        let mut tape: Vec<char> = if input_string.is_empty() {
+            vec![]
+        } else {
+            input_string.chars().collect()
+        };
+        let mut head_position: i32 = 0;
+        let mut current_state = self.initial_state.clone();
+        let mut step = 0;
+
+        // Validate input symbols
+        for symbol in input_string.chars() {
+            if !self.alphabet.contains(&symbol) {
+                return Err(format!("Invalid input symbol: {}", symbol));
+            }
+        }
+
+        // Save initial snapshot
+        snapshots.push(ExecutionSnapshot {
+            tape: tape.clone(),
+            head_position,
+            current_state: current_state.clone(),
+            step,
+        });
+
+        // Execute until halt or max steps
+        while step < max_steps {
+            // Check if in halting state
+            if self.accept_states.contains(&current_state)
+                || self.reject_states.contains(&current_state)
+            {
+                break;
+            }
+
+            // Extend tape if needed
+            if head_position < 0 {
+                tape.insert(0, self.blank_symbol);
+                head_position = 0;
+            }
+            if head_position >= tape.len() as i32 {
+                tape.push(self.blank_symbol);
+            }
+
+            // Read current symbol
+            let current_symbol = tape[head_position as usize];
+
+            // Look up transition
+            let transition_key = (current_state.clone(), current_symbol);
+            if let Some((new_state, write_symbol, direction)) = self.transitions.get(&transition_key)
+            {
+                // Write symbol
+                tape[head_position as usize] = *write_symbol;
+
+                // Move head
+                match direction {
+                    Direction::L => head_position -= 1,
+                    Direction::R => head_position += 1,
+                }
+
+                // Update state
+                current_state = new_state.clone();
+                step += 1;
+
+                // Save snapshot after transition
+                snapshots.push(ExecutionSnapshot {
+                    tape: tape.clone(),
+                    head_position,
+                    current_state: current_state.clone(),
+                    step,
+                });
+            } else {
+                // No transition defined - halt
+                break;
+            }
+        }
+
+        Ok(snapshots)
+    }
+
+    /// Display the state diagram with transitions
+    fn display_state_diagram(&self, current_state: Option<&str>) {
+        println!("\n{}", "=".repeat(60));
+        println!("{}", "STATE DIAGRAM".bold());
+        println!("{}", "=".repeat(60));
+
+        // Display states
+        println!("\n{}:", "States".bold());
+        for state in &self.states {
+            let mut state_str = format!("  {}", state);
+            
+            if self.accept_states.contains(state) {
+                state_str = format!("{} [ACCEPT]", state_str).green().to_string();
+            } else if self.reject_states.contains(state) {
+                state_str = format!("{} [REJECT]", state_str).red().to_string();
+            }
+
+            if let Some(current) = current_state {
+                if state == current {
+                    state_str = format!("→ {}", state_str).bold().yellow().to_string();
+                }
+            }
+
+            println!("{}", state_str);
+        }
+
+        // Display transitions grouped by state
+        println!("\n{}:", "Transitions".bold());
+        let mut transitions_by_state: HashMap<&String, Vec<(char, &String, char, Direction)>> =
+            HashMap::new();
+
+        for ((state, symbol), (new_state, write_symbol, direction)) in &self.transitions {
+            transitions_by_state
+                .entry(state)
+                .or_insert_with(Vec::new)
+                .push((*symbol, new_state, *write_symbol, *direction));
+        }
+
+        let mut sorted_states: Vec<_> = transitions_by_state.keys().collect();
+        sorted_states.sort();
+
+        for state in sorted_states {
+            let mut state_header = format!("  {}:", state);
+            if let Some(current) = current_state {
+                if state.as_str() == current {
+                    state_header = state_header.bold().yellow().to_string();
+                }
+            }
+            println!("{}", state_header);
+
+            let mut transitions = transitions_by_state.get(state).unwrap().clone();
+            transitions.sort_by_key(|(s, _, _, _)| *s);
+
+            for (symbol, new_state, write_symbol, direction) in transitions {
+                let dir_str = match direction {
+                    Direction::L => "←",
+                    Direction::R => "→",
+                };
+                let transition_str = format!(
+                    "    ({}) → write '{}', move {}, goto {}",
+                    symbol, write_symbol, dir_str, new_state
+                );
+
+                if let Some(current) = current_state {
+                    if state.as_str() == current {
+                        println!("{}", transition_str.yellow());
+                    } else {
+                        println!("{}", transition_str);
+                    }
+                } else {
+                    println!("{}", transition_str);
+                }
+            }
+        }
+        println!();
+    }
+
+    /// Display the tape with head position
+    fn display_tape(snapshot: &ExecutionSnapshot, blank_symbol: char) {
+        println!("\n{}", "TAPE".bold());
+        
+        // Determine visible range around head
+        let head_pos = snapshot.head_position;
+        let tape_len = snapshot.tape.len() as i32;
+        
+        // Show at least 20 cells centered around head
+        let visible_start = (head_pos - 10).max(0);
+        let visible_end = (head_pos + 10).min(tape_len - 1).max(visible_start + 19);
+        
+        // Print tape cells
+        print!("Tape:   ");
+        for i in visible_start..=visible_end {
+            if i >= 0 && i < tape_len {
+                let cell = snapshot.tape[i as usize];
+                let cell_str = if cell == blank_symbol {
+                    format!("[_]")
+                } else {
+                    format!("[{}]", cell)
+                };
+                
+                if i == head_pos {
+                    print!("{}", cell_str.bold().green());
+                } else {
+                    print!("{}", cell_str);
+                }
+            } else {
+                print!("[_]");
+            }
+        }
+        println!();
+        
+        // Print head indicator
+        print!("Head:   ");
+        for i in visible_start..=visible_end {
+            if i == head_pos {
+                print!(" ^ ");
+            } else {
+                print!("   ");
+            }
+        }
+        println!();
+        
+        // Print position numbers
+        print!("Pos:    ");
+        for i in visible_start..=visible_end {
+            print!("{:>3}", i);
+        }
+        println!("\n");
     }
 }
 
@@ -429,29 +656,40 @@ fn run_example_machine() {
             break;
         }
 
-        match machine.execute(input_str, 10000) {
-            Ok(result) => {
-                println!("\n{}", "-".repeat(60));
-                println!("EXECUTION RESULTS");
-                println!("{}", "-".repeat(60));
-                println!("Input string: '{}'", input_str);
-                println!("Steps executed: {}", result.steps);
-                println!("Final state: {}", result.final_state);
-                println!("Machine halted: {}", result.halted);
+        // Ask if user wants visual mode
+        print!("Run in visual step-by-step mode? (y/n): ");
+        io::stdout().flush().unwrap();
+        let mut visual_mode = String::new();
+        io::stdin().read_line(&mut visual_mode).unwrap();
+        let visual_mode = visual_mode.trim().eq_ignore_ascii_case("y");
 
-                if let Some(true) = result.accepts {
-                    println!(
-                        "\n✓ RESULT: ACCEPTS (halts in state {})",
-                        result.final_state
-                    );
-                } else if let Some(false) = result.accepts {
-                    println!("\n✗ RESULT: REJECTS (final state: {})", result.final_state);
-                } else {
-                    println!("\n? RESULT: DID NOT HALT (possible infinite loop)");
+        if visual_mode {
+            run_visual_mode(machine, input_str);
+        } else {
+            match machine.execute(input_str, 10000) {
+                Ok(result) => {
+                    println!("\n{}", "-".repeat(60));
+                    println!("EXECUTION RESULTS");
+                    println!("{}", "-".repeat(60));
+                    println!("Input string: '{}'", input_str);
+                    println!("Steps executed: {}", result.steps);
+                    println!("Final state: {}", result.final_state);
+                    println!("Machine halted: {}", result.halted);
+
+                    if let Some(true) = result.accepts {
+                        println!(
+                            "\n✓ RESULT: ACCEPTS (halts in state {})",
+                            result.final_state
+                        );
+                    } else if let Some(false) = result.accepts {
+                        println!("\n✗ RESULT: REJECTS (final state: {})", result.final_state);
+                    } else {
+                        println!("\n? RESULT: DID NOT HALT (possible infinite loop)");
+                    }
+                    println!("{}", "-".repeat(60));
                 }
-                println!("{}", "-".repeat(60));
+                Err(e) => println!("Error: {}", e),
             }
-            Err(e) => println!("Error: {}", e),
         }
     }
 }
@@ -507,32 +745,43 @@ fn run_custom_machine() {
                         break;
                     }
 
-                    match machine.execute(input_str, 10000) {
-                        Ok(result) => {
-                            println!("\n{}", "-".repeat(60));
-                            println!("EXECUTION RESULTS");
-                            println!("{}", "-".repeat(60));
-                            println!("Input string: '{}'", input_str);
-                            println!("Steps executed: {}", result.steps);
-                            println!("Final state: {}", result.final_state);
-                            println!("Machine halted: {}", result.halted);
+                    // Ask if user wants visual mode
+                    print!("Run in visual step-by-step mode? (y/n): ");
+                    io::stdout().flush().unwrap();
+                    let mut visual_mode = String::new();
+                    io::stdin().read_line(&mut visual_mode).unwrap();
+                    let visual_mode = visual_mode.trim().eq_ignore_ascii_case("y");
 
-                            if let Some(true) = result.accepts {
-                                println!(
-                                    "\n✓ RESULT: ACCEPTS (halts in state {})",
-                                    result.final_state
-                                );
-                            } else if let Some(false) = result.accepts {
-                                println!(
-                                    "\n✗ RESULT: REJECTS (final state: {})",
-                                    result.final_state
-                                );
-                            } else {
-                                println!("\n? RESULT: DID NOT HALT (possible infinite loop)");
+                    if visual_mode {
+                        run_visual_mode(&machine, input_str);
+                    } else {
+                        match machine.execute(input_str, 10000) {
+                            Ok(result) => {
+                                println!("\n{}", "-".repeat(60));
+                                println!("EXECUTION RESULTS");
+                                println!("{}", "-".repeat(60));
+                                println!("Input string: '{}'", input_str);
+                                println!("Steps executed: {}", result.steps);
+                                println!("Final state: {}", result.final_state);
+                                println!("Machine halted: {}", result.halted);
+
+                                if let Some(true) = result.accepts {
+                                    println!(
+                                        "\n✓ RESULT: ACCEPTS (halts in state {})",
+                                        result.final_state
+                                    );
+                                } else if let Some(false) = result.accepts {
+                                    println!(
+                                        "\n✗ RESULT: REJECTS (final state: {})",
+                                        result.final_state
+                                    );
+                                } else {
+                                    println!("\n? RESULT: DID NOT HALT (possible infinite loop)");
+                                }
+                                println!("{}", "-".repeat(60));
                             }
-                            println!("{}", "-".repeat(60));
+                            Err(e) => println!("Error: {}", e),
                         }
-                        Err(e) => println!("Error: {}", e),
                     }
                 }
             }
@@ -577,32 +826,43 @@ fn load_machine_from_file() {
                             break;
                         }
 
-                        match machine.execute(input_str, 10000) {
-                            Ok(result) => {
-                                println!("\n{}", "-".repeat(60));
-                                println!("EXECUTION RESULTS");
-                                println!("{}", "-".repeat(60));
-                                println!("Input string: '{}'", input_str);
-                                println!("Steps executed: {}", result.steps);
-                                println!("Final state: {}", result.final_state);
-                                println!("Machine halted: {}", result.halted);
+                        // Ask if user wants visual mode
+                        print!("Run in visual step-by-step mode? (y/n): ");
+                        io::stdout().flush().unwrap();
+                        let mut visual_mode = String::new();
+                        io::stdin().read_line(&mut visual_mode).unwrap();
+                        let visual_mode = visual_mode.trim().eq_ignore_ascii_case("y");
 
-                                if let Some(true) = result.accepts {
-                                    println!(
-                                        "\n✓ RESULT: ACCEPTS (halts in state {})",
-                                        result.final_state
-                                    );
-                                } else if let Some(false) = result.accepts {
-                                    println!(
-                                        "\n✗ RESULT: REJECTS (final state: {})",
-                                        result.final_state
-                                    );
-                                } else {
-                                    println!("\n? RESULT: DID NOT HALT (possible infinite loop)");
+                        if visual_mode {
+                            run_visual_mode(&machine, input_str);
+                        } else {
+                            match machine.execute(input_str, 10000) {
+                                Ok(result) => {
+                                    println!("\n{}", "-".repeat(60));
+                                    println!("EXECUTION RESULTS");
+                                    println!("{}", "-".repeat(60));
+                                    println!("Input string: '{}'", input_str);
+                                    println!("Steps executed: {}", result.steps);
+                                    println!("Final state: {}", result.final_state);
+                                    println!("Machine halted: {}", result.halted);
+
+                                    if let Some(true) = result.accepts {
+                                        println!(
+                                            "\n✓ RESULT: ACCEPTS (halts in state {})",
+                                            result.final_state
+                                        );
+                                    } else if let Some(false) = result.accepts {
+                                        println!(
+                                            "\n✗ RESULT: REJECTS (final state: {})",
+                                            result.final_state
+                                        );
+                                    } else {
+                                        println!("\n? RESULT: DID NOT HALT (possible infinite loop)");
+                                    }
+                                    println!("{}", "-".repeat(60));
                                 }
-                                println!("{}", "-".repeat(60));
+                                Err(e) => println!("Error: {}", e),
                             }
-                            Err(e) => println!("Error: {}", e),
                         }
                     }
                 }
@@ -611,6 +871,131 @@ fn load_machine_from_file() {
             Err(e) => println!("Invalid JSON in file: {}", e),
         },
         Err(e) => println!("File error: {}", e),
+    }
+}
+
+/// Run visual step-by-step execution mode
+fn run_visual_mode(machine: &TuringMachine, input_str: &str) {
+    println!("\n{}", "=".repeat(60));
+    println!("{}", "VISUAL STEP-BY-STEP MODE".bold().cyan());
+    println!("{}", "=".repeat(60));
+    println!("Input: '{}'", input_str);
+    
+    // Get all execution snapshots
+    match machine.execute_step_by_step(input_str, 10000) {
+        Ok(snapshots) => {
+            if snapshots.is_empty() {
+                println!("No snapshots generated.");
+                return;
+            }
+
+            let mut current_step = 0;
+            let max_step = snapshots.len() - 1;
+
+            loop {
+                // Clear screen (cross-platform approach)
+                print!("\x1B[2J\x1B[1;1H");
+                
+                let snapshot = &snapshots[current_step];
+                
+                println!("\n{}", "=".repeat(60));
+                println!("{}", "VISUAL STEP-BY-STEP MODE".bold().cyan());
+                println!("{}", "=".repeat(60));
+                println!("Input: '{}'", input_str);
+                println!("Step: {}/{}", current_step, max_step);
+                println!("Current State: {}", snapshot.current_state.bold().yellow());
+                
+                // Display state diagram with current state highlighted
+                machine.display_state_diagram(Some(&snapshot.current_state));
+                
+                // Display tape
+                TuringMachine::display_tape(snapshot, machine.blank_symbol);
+                
+                // Display status
+                println!("{}", "STATUS".bold());
+                if machine.accept_states.contains(&snapshot.current_state) {
+                    println!("✓ Machine has {} - in ACCEPT state", "HALTED".green().bold());
+                } else if machine.reject_states.contains(&snapshot.current_state) {
+                    println!("✗ Machine has {} - in REJECT state", "HALTED".red().bold());
+                } else if current_step == max_step {
+                    // Check if there's a valid transition
+                    let head_pos = snapshot.head_position as usize;
+                    let current_symbol = if head_pos < snapshot.tape.len() {
+                        snapshot.tape[head_pos]
+                    } else {
+                        machine.blank_symbol
+                    };
+                    
+                    if machine
+                        .transitions
+                        .contains_key(&(snapshot.current_state.clone(), current_symbol))
+                    {
+                        println!("Machine is running...");
+                    } else {
+                        println!("✗ Machine has {} - no transition defined (implicit reject)", "HALTED".red().bold());
+                    }
+                } else {
+                    println!("Machine is running...");
+                }
+                
+                // Navigation controls
+                println!("\n{}", "=".repeat(60));
+                println!("{}", "CONTROLS".bold());
+                print!("Commands: ");
+                if current_step > 0 {
+                    print!("[{}] Previous  ", "p".bold());
+                }
+                if current_step < max_step {
+                    print!("[{}] Next  ", "n".bold());
+                }
+                print!("[{}] Jump to step  [{}] Quit", "j".bold(), "q".bold());
+                println!("\n{}", "=".repeat(60));
+                
+                print!("\nEnter command: ");
+                io::stdout().flush().unwrap();
+                
+                let mut command = String::new();
+                io::stdin().read_line(&mut command).unwrap();
+                let command = command.trim().to_lowercase();
+                
+                match command.as_str() {
+                    "n" | "next" if current_step < max_step => {
+                        current_step += 1;
+                    }
+                    "p" | "prev" | "previous" if current_step > 0 => {
+                        current_step -= 1;
+                    }
+                    "j" | "jump" => {
+                        print!("Enter step number (0-{}): ", max_step);
+                        io::stdout().flush().unwrap();
+                        let mut step_str = String::new();
+                        io::stdin().read_line(&mut step_str).unwrap();
+                        if let Ok(step) = step_str.trim().parse::<usize>() {
+                            if step <= max_step {
+                                current_step = step;
+                            } else {
+                                println!("Invalid step number. Press Enter to continue...");
+                                let mut _dummy = String::new();
+                                io::stdin().read_line(&mut _dummy).unwrap();
+                            }
+                        }
+                    }
+                    "q" | "quit" | "exit" | "back" => {
+                        break;
+                    }
+                    "" if current_step < max_step => {
+                        // Enter key defaults to next
+                        current_step += 1;
+                    }
+                    _ => {
+                        println!("Invalid command. Press Enter to continue...");
+                        let mut _dummy = String::new();
+                        io::stdin().read_line(&mut _dummy).unwrap();
+                    }
+                }
+            }
+        }
+        Err(e) => println!("Error during execution: {}", e),
     }
 }
 
